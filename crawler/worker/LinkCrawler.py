@@ -33,4 +33,4 @@ class LinkCrawler(object):
                 break
             else:
                 downloader = Downloader(site)
-
+                print downloader
