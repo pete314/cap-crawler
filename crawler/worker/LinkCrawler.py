@@ -7,7 +7,10 @@ Since: Jan 2016
 Description: Download and store links
 """
 
-import Downloader
+from Downloader import Downloader
+import re
+from collections import defaultdict
+from BeautifulSoup import BeautifulSoup
 
 class LinkCrawler(object):
 
@@ -25,6 +28,8 @@ class LinkCrawler(object):
         self.threads = []
 
     def process_list(self):
+        print(len(self.root_list))
+        results = []
         while True:
             try:
                 site = self.root_list.pop()
@@ -32,5 +37,27 @@ class LinkCrawler(object):
                 """No more elements to process"""
                 break
             else:
-                downloader = Downloader(site)
-                print downloader
+                downloader = Downloader()
+                result = downloader(site)
+                if result['code'] is 200:
+                    print ("Status for %s is %s" % (site, result['code']))
+                    site_links = self.scrap_content_links(result['html'], site)
+                    results.append(site_links)
+
+        return results
+
+    def scrap_content_links(self, html=None, site=None):
+        """
+        Regex the links from the downloaded content
+        :param html: downloaded html content
+        :return: links[] - list of all link on page
+        """
+        if html is None:
+            return []
+        else:
+            links = []
+            soup = BeautifulSoup(html)
+            for tag in soup.findAll('a', href=True):
+                if tag['href'] != '#' and not links.__contains__(tag['href']):
+                    links.append(tag['href'])
+            return links

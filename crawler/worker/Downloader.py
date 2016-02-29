@@ -23,13 +23,19 @@ DEFAULT_AGENT = "xsec"
 
 
 class Downloader(object):
-    def __init__(self, url=None, delay_time=DEFAULT_DELAY, max_retry=DEFAULT_RETRY):
+    def __init__(self, url=None, delay_time=DEFAULT_DELAY, max_retry=DEFAULT_RETRY, user_agent=DEFAULT_AGENT):
         self.url = url
         self.delay_time = delay_time
         self.max_retry = max_retry
+        self.user_agent = user_agent
 
     def __call__(self, url):
         result = None
+        if result is None:
+            headers = {'User-agent': self.user_agent}
+            result = self.download(url, headers, num_retries=self.max_retry)
+
+        return result
 
     def download(self, url, headers, num_retries, data=None):
         """
@@ -53,18 +59,16 @@ class Downloader(object):
                 code = e.code
                 if num_retries > 0 and 500 <= code < 600:
                     # retry 5XX HTTP errors
-                    return self._get(url, headers, proxy, num_retries-1, data)
+                    return self._get(url, headers, num_retries-1, data)
             else:
                 code = None
         return {'html': html, 'code': code}
 
 class Throttle:
-    """Throttle downloading by sleeping between requests to same domain
+    """Sleep between downloads from same domain
     """
     def __init__(self, delay):
-        # amount of delay between downloads for each domain
         self.delay = delay
-        # timestamp of when a domain was last accessed
         self.domains = {}
 
     def wait(self, url):
