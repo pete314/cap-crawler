@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient, errors
 
 
-class MongoCache(object):
+class MongoQueue(object):
 
     def __init__(self, client=None, timeout=300, database_name=None, host=None, port=None):
         """
