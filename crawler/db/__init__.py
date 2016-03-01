@@ -1,1 +1,1 @@
-from .MongoQueue import MongoQueue
+from crawler.db.MongoQueue import MongoQueue

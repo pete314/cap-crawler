@@ -11,6 +11,7 @@ from pymongo import MongoClient, errors
 
 
 class MongoQueue(object):
+    WAITING, PROCESSING, COMPLETE = range(3)
 
     def __init__(self, client=None, timeout=300, database_name=None, host=None, port=None):
         """
@@ -40,7 +41,6 @@ class MongoQueue(object):
 
     def pop(self):
         """Get a waiting URL from the queue and set its status to processing.
-        If queue is empty a KeyError exception is raised
         """
         record = self.db.crawl_queue.find_and_modify(
             query={'status': self.WAITING},

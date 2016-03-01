@@ -19,7 +19,7 @@ import sys
 DEFAULT_DELAY = 10
 DEFAULT_RETRY = 1
 DEFAULT_TIMEOUT = 60
-DEFAULT_AGENT = "xsec"
+DEFAULT_AGENT = "Research bot"
 
 
 class Downloader(object):
@@ -40,7 +40,7 @@ class Downloader(object):
     def download(self, url, headers, num_retries, data=None):
         """
         Simple request to download content
-        :param url: The content url to donwload
+        :param url: The content url to download
         :param headers: Headers used in request
         :param num_retries:
         :param data: Post|Put data
