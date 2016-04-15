@@ -11,6 +11,7 @@ import robotparser
 import urlparse
 import threading
 import time
+import bz2
 from datetime import datetime
 from hashlib import md5
 from Downloader import Downloader
@@ -93,7 +94,14 @@ class LinkCrawler(object):
                     if result['code'] is 200:
                         self.scrap_content_links(result['html'], site, next_depth=next_depth)
                         if self.scraper is None:
-                            self.Cassa.insert_into()
+                            self.Cassa.insert_into('crawl_dump', {
+                                'url_hash': md5(site).hexdigest(),
+                                'url': site,
+                                'scrape_type': 'FULL' if self.scraper is None else self.scraper,
+                                'crawler_job': 'TEST',
+                                'content': bz2.compress(result['html']).encode('hex'),
+                                'created': datetime.now()
+                            })
 
                 else:
                     print("Page blocked by robots")
@@ -154,3 +162,4 @@ class LinkCrawler(object):
         parse_rf.set_url(urlparse.urljoin(base_url, '/robots.txt'))
         parse_rf.read()
         return parse_rf
+

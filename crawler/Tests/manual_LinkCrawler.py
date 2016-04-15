@@ -11,7 +11,7 @@ from crawler.worker.LinkCrawler import LinkCrawler
 from crawler.db.MongoQueue import MongoQueue
 
 def manual_test_LinkCrawler():
-    sites = ["https://crosssec.com"]
+    sites = ["https://blog.crosssec.com"]
     for site in sites:
         queue = MongoQueue()
         queue.clear()

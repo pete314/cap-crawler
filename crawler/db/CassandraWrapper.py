@@ -32,15 +32,13 @@ class CassandraWrapper(object):
                 """
                 delete from crawl_dump where url_hash = %(url_hash)s
                 """,
-                params_dict['url_hash']
-            ); # Workaround for sql replace into
-            self.session.execute(
-                """
-                insert into crawl_dump (url_hash, url, scraper_type, crawler_job, content, created)
-                values (%(url_hash)s, %(url)s, %(scraper_type)s, %(crawler_job)s, %(content)s, %(created)s)
-                """,
                 params_dict
-                )
+            )  # Workaround for sql replace into
+            prep = self.session.prepare(
+                    """insert into crawl_dump (url_hash, url, scrape_type, crawler_job, content, created)
+                        values (?, ?, ?, ?, ?, ?)
+                    """)
+            self.session.execute(prep.bind(params_dict))
         elif column_family is 'crawled_links' and len(params_dict) is 4:
             self.session.execute(
                 """
