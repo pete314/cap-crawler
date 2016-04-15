@@ -9,15 +9,20 @@ Description: Download and store links
 
 import robotparser
 import urlparse
+import threading
+import time
+from datetime import datetime
+from hashlib import md5
 from Downloader import Downloader
 from crawler.db.MongoQueue import MongoQueue
+from crawler.db.CassandraWrapper import CassandraWrapper
 from BeautifulSoup import BeautifulSoup
 
 DEFAULT_AGENT = "Research bot"
 
 class LinkCrawler(object):
 
-    def __init__(self, site_domain=None, cache=None, queue=None, max_threads=10, timeout=60, user_agent=DEFAULT_AGENT):
+    def __init__(self, site_domain=None, cache=None, queue=None, max_threads=10, timeout=60, max_depth=3, user_agent=DEFAULT_AGENT, scraper=None):
         """
         Init the link crawler with the cache to process
         :param site_domain: Domain to work with
@@ -33,42 +38,76 @@ class LinkCrawler(object):
         self.max_threads = max_threads
         self.timeout = timeout
         self.user_agent = user_agent
-        self.threads = []
+        self.scraper = scraper
         self.downloader = Downloader(user_agent=user_agent)
+        self.robots = None
+        self.max_depth = max_depth
+        self.Cassa = CassandraWrapper()
 
-    def process_list(self):
-        results = []
-        self.queue.push(self.site_domain)
-        robots = self.parse_robots_file(self.site_domain)
+    def threaded_executor(self):
+        threads = []
+        self.queue.push(self.site_domain, 0)
+        if self.robots is None:
+            self.robots = self.parse_robots_file(self.site_domain)
+
+        while threads or self.queue:
+            # the crawl is still active
+            for thread in threads:
+                if not thread.is_alive():
+                    # remove the stopped threads
+                    threads.remove(thread)
+            while len(threads) < self.max_threads and self.queue:
+                thread = threading.Thread(target=self.process_queue)
+                thread.setDaemon(True)
+                thread.start()
+                threads.append(thread)
+
+            time.sleep(1)
+
+        # Only used for testing
+        return True
+
+    def process_queue(self):
+        """
+        Process the current queue elements
+        :return:None
+        """
+
         while True:
             try:
-                site = self.queue.pop()
+                record = self.queue.pop()
+                if record['depth'] >= self.max_depth + 1:
+                    # First occurrence of the max_depth + 1 will break the crawling
+                    self.queue.clear()
+                    return
+
+                site = record['_id']
+                next_depth = record['depth'] + 1
+
             except KeyError:
                 """No more elements to process"""
                 break
             else:
-                if robots.can_fetch(self.user_agent, site):
+                if self.robots.can_fetch(self.user_agent, site):
                     result = self.downloader(site)
                     if result['code'] is 200:
-                        print ("Status for %s is %s" % (site, result['code']))
-                        site_links = self.scrap_content_links(result['html'], site)
-                        results.append(site_links)
+                        self.scrap_content_links(result['html'], site, next_depth=next_depth)
+                        if self.scraper is None:
+                            self.Cassa.insert_into()
+
                 else:
                     print("Page blocked by robots")
 
-        return results
-
-    def scrap_content_links(self, html=None, site=None, same_domain_only=True):
+    def scrap_content_links(self, html=None, site=None, same_domain_only=True, next_depth=0):
         """
         Regex the links from the downloaded content
         :param html: downloaded html content
         :param site: the base url to compare to
         :param same_domain_only: (True) - does not look for external links
-        :return: links[] - list of all link on page
+        :param next_depth: the depth which the site scraping would execute
+        :return: none
         """
-        if html is None:
-            return []
-        else:
+        if html is not None:
             links = []
             soup = BeautifulSoup(html)
             for tag in soup.findAll('a', href=True):
@@ -76,11 +115,15 @@ class LinkCrawler(object):
                     link = self.normalize_link(site, tag['href'])
                     if (same_domain_only and self.check_same_domain(site, link)):
                         # THIS WILL EXCLUDE EXTERNAL LINKS AND ONLY LOOK FOR LINKS ON SAME DOMAIN
-                        links.append(link)
-                        self.queue.push(link)
-                    else:
-                        links.append(link)
-            return links
+                        self.Cassa.insert_into('crawled_links',
+                                               {
+                                                   'url_hash': md5(site).hexdigest(),
+                                                   'url': site,
+                                                   'crawler_job': 'TEST',
+                                                   'created': datetime.now()
+                                               })
+                        self.queue.push(link, next_depth)
+                        links.append(link) # just used to filter
 
     def normalize_link(self, site, link):
         """

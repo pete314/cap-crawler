@@ -11,12 +11,15 @@ from crawler.worker.LinkCrawler import LinkCrawler
 from crawler.db.MongoQueue import MongoQueue
 
 def manual_test_LinkCrawler():
-    sites = ["https://crosssec.com", "http://w5labs.hu", "http://www.gmit.ie"]
+    sites = ["https://crosssec.com"]
     for site in sites:
         queue = MongoQueue()
         queue.clear()
-        link_crawler = LinkCrawler(site, queue=queue)
-        results = link_crawler.process_list()
+        link_crawler = LinkCrawler(site, queue=queue, max_depth=4)
+        link_crawler.threaded_executor()
+        continue
+
+        results = link_crawler.process_queue()
         for values in results:
             for link in values:
                 print (link)

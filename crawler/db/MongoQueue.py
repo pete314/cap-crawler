@@ -31,11 +31,11 @@ class MongoQueue(object):
         )
         return True if record else False
 
-    def push(self, url):
+    def push(self, url, depth):
         """Add a url to queue if does not exist
         """
         try:
-            self.db.crawl_queue.insert({'_id': url, 'status':self.WAITING})
+            self.db.crawl_queue.insert({'_id': url, 'status': self.WAITING, 'depth': depth})
         except errors.DuplicateKeyError as e:
             pass # already in queue
 
@@ -47,7 +47,7 @@ class MongoQueue(object):
             update={'$set': {'status': self.PROCESSING, 'timestamp': datetime.now()}}
         )
         if record:
-            return record['_id']
+            return record
         else:
             self.repair()
             raise KeyError()
@@ -59,7 +59,7 @@ class MongoQueue(object):
             update={'$set': {'status': self.PROCESSING, 'timestamp': datetime.now()}}
         )
         if record:
-            return record['_id']
+            return record
 
     def complete(self, url):
         self.db.crawl_queue.update({'_id': url}, {'$set': {'status': self.COMPLETE}})

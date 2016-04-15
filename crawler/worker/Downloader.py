@@ -16,9 +16,9 @@ import socket
 import sys
 
 
-DEFAULT_DELAY = 10
+DEFAULT_DELAY = 20
 DEFAULT_RETRY = 1
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 30
 DEFAULT_AGENT = "Research bot"
 
 
@@ -53,7 +53,7 @@ class Downloader(object):
             html = response.read()
             code = response.code
         except Exception as e:
-            print 'Download error:', str(e)
+            print 'Download error: %s, url:%s' % (str(e), url)
             html = ''
             if hasattr(e, 'code'):
                 code = e.code
