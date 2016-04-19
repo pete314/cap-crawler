@@ -23,7 +23,7 @@ class CassandraWrapper(object):
         :param port:
         :return:
         """
-        self.cluster = Cluster()#connects on localhost
+        self.cluster = Cluster()  # Connects on localhost
         self.session = self.cluster.connect('crawl_dump')
 
     def insert_into(self, column_family, params_dict={}):
