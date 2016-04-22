@@ -1,3 +1,4 @@
 sudo pip install cassandra-driver
 sudo pip install pymongo
 sudo pip install BeautifulSoup
+sudo pip install bs4

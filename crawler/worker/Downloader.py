@@ -19,15 +19,16 @@ import sys
 DEFAULT_DELAY = 20
 DEFAULT_RETRY = 1
 DEFAULT_TIMEOUT = 30
-DEFAULT_AGENT = "Research bot"
+DEFAULT_AGENT = "Mozilla/5.0 (compatible; Research-bot)"
 
 
 class Downloader(object):
-    def __init__(self, url=None, delay_time=DEFAULT_DELAY, max_retry=DEFAULT_RETRY, user_agent=DEFAULT_AGENT):
+    def __init__(self, url=None, delay_time=DEFAULT_DELAY, max_retry=DEFAULT_RETRY, user_agent=DEFAULT_AGENT, html_only=True):
         self.url = url
         self.delay_time = delay_time
         self.max_retry = max_retry
         self.user_agent = user_agent
+        self.html_only = html_only
 
     def __call__(self, url):
         result = None
@@ -50,6 +51,11 @@ class Downloader(object):
         opener = urllib2.build_opener()
         try:
             response = opener.open(request)
+            info = response.info()
+
+            if self.html_only and "text/html" not in info['content-type']:
+                return {'html': None, 'code': 994}
+
             html = response.read()
             code = response.code
         except Exception as e:

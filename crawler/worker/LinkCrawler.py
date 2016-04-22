@@ -12,18 +12,19 @@ import urlparse
 import threading
 import time
 import bz2
+import atexit
 from datetime import datetime
 from hashlib import md5
 from Downloader import Downloader
 from crawler.db.MongoQueue import MongoQueue
 from crawler.db.CassandraWrapper import CassandraWrapper
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 
-DEFAULT_AGENT = "Research bot"
+DEFAULT_AGENT = "Mozilla/5.0 (compatible; Research-bot)"
 
 class LinkCrawler(object):
 
-    def __init__(self, site_domain=None, cache=None, queue=None, max_threads=10, timeout=60, max_depth=3, user_agent=DEFAULT_AGENT, scraper=None):
+    def __init__(self, site_domain=None, cache=None, queue=None, max_threads=10, timeout=60, max_depth=3, user_agent=DEFAULT_AGENT, scraper=None, crawl_job=None):
         """
         Init the link crawler with the cache to process
         :param site_domain: Domain to work with
@@ -40,10 +41,17 @@ class LinkCrawler(object):
         self.timeout = timeout
         self.user_agent = user_agent
         self.scraper = scraper
+        self.crawl_job = crawl_job if crawl_job is not None else "N/A"
         self.downloader = Downloader(user_agent=user_agent)
         self.robots = None
         self.max_depth = max_depth
         self.Cassa = CassandraWrapper()
+        self._clenup = self.close
+        atexit.register(self._clenup)
+
+    def close(self):
+        """Close cassa connection"""
+        self.Cassa.close()
 
     def threaded_executor(self):
         threads = []
@@ -65,6 +73,7 @@ class LinkCrawler(object):
 
             time.sleep(1)
 
+        self.close()
         # Only used for testing
         return True
 
@@ -79,6 +88,7 @@ class LinkCrawler(object):
                 record = self.queue.pop()
                 if record['depth'] >= self.max_depth + 1:
                     # First occurrence of the max_depth + 1 will break the crawling
+                    print "reached depth"
                     self.queue.clear()
                     return
 
@@ -87,22 +97,32 @@ class LinkCrawler(object):
 
             except KeyError:
                 """No more elements to process"""
-                break
+                return
             else:
                 if self.robots.can_fetch(self.user_agent, site):
                     result = self.downloader(site)
                     if result['code'] is 200:
+                        print site
                         self.scrap_content_links(result['html'], site, next_depth=next_depth)
                         if self.scraper is None:
                             self.Cassa.insert_into('crawl_dump', {
                                 'url_hash': md5(site).hexdigest(),
                                 'url': site,
                                 'scrape_type': 'FULL' if self.scraper is None else self.scraper,
-                                'crawler_job': 'TEST',
+                                'crawler_job': self.crawl_job,
                                 'content': bz2.compress(result['html']).encode('hex'),
                                 'created': datetime.now()
                             })
-
+                    else:
+                        self.Cassa.insert_into('crawled_links',
+                                               {
+                                                   'url_hash': md5(site).hexdigest(),
+                                                   'url': site,
+                                                   'crawler_job': self.crawl_job,
+                                                   'status': result['code'],
+                                                   'message': 'Error while scraping',
+                                                   'created': datetime.now()
+                                               })
                 else:
                     print("Page blocked by robots")
 
@@ -117,7 +137,7 @@ class LinkCrawler(object):
         """
         if html is not None:
             links = []
-            soup = BeautifulSoup(html)
+            soup = BeautifulSoup(html, 'lxml')
             for tag in soup.findAll('a', href=True):
                 if tag['href'] != '#' and not links.__contains__(tag['href']):
                     link = self.normalize_link(site, tag['href'])
@@ -127,7 +147,7 @@ class LinkCrawler(object):
                                                {
                                                    'url_hash': md5(site).hexdigest(),
                                                    'url': site,
-                                                   'crawler_job': 'TEST',
+                                                   'crawler_job': self.crawl_job,
                                                    'created': datetime.now()
                                                })
                         self.queue.push(link, next_depth)

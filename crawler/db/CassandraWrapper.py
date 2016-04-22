@@ -7,13 +7,8 @@ Since: Jan 2016
 Description: Wrapper class for cassandra db
 """
 
-"""
- create table html_dump ( block_uid uuid primary key, site_domain varchar, site_url varchar, content text, created timestamp);
- create keyspace crawl_dump with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
-
-"""
-
 from cassandra.cluster import Cluster
+
 
 class CassandraWrapper(object):
     def __init__(self, host='localhost', port='9160'):
@@ -24,7 +19,11 @@ class CassandraWrapper(object):
         :return:
         """
         self.cluster = Cluster()  # Connects on localhost
-        self.session = self.cluster.connect('crawl_dump')
+        self.session = self.cluster.connect('crawldump')
+
+    def close(self):
+        self.session.cluster.shutdown()
+        self.session.shutdown()
 
     def insert_into(self, column_family, params_dict={}):
         if column_family is 'crawl_dump' and len(params_dict) is 6:
@@ -45,7 +44,7 @@ class CassandraWrapper(object):
                 delete from crawled_links where url_hash = %(url_hash)s
                 """,
                 params_dict
-            );
+            )
             self.session.execute(
                 """
                 insert into crawled_links(url_hash, url, crawler_job, created)
