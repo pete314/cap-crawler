@@ -59,7 +59,7 @@ class Downloader(object):
             html = response.read()
             code = response.code
         except Exception as e:
-            print 'Download error: %s, url:%s' % (str(e), url)
+            print '\n+++++++++Download error: %s, url:%s\n' % (str(e), url)
             html = ''
             if hasattr(e, 'code'):
                 code = e.code

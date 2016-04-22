@@ -13,6 +13,7 @@ import threading
 import time
 import bz2
 import atexit
+import sys
 from datetime import datetime
 from hashlib import md5
 from Downloader import Downloader
@@ -22,9 +23,10 @@ from bs4 import BeautifulSoup
 
 DEFAULT_AGENT = "Mozilla/5.0 (compatible; Research-bot)"
 
+
 class LinkCrawler(object):
 
-    def __init__(self, site_domain=None, cache=None, queue=None, max_threads=10, timeout=60, max_depth=3, user_agent=DEFAULT_AGENT, scraper=None, crawl_job=None):
+    def __init__(self, site_domain=None, start_at=None, cache=None, queue=None, max_threads=10, timeout=60, max_depth=3, user_agent=DEFAULT_AGENT, scraper=None, crawl_job=None):
         """
         Init the link crawler with the cache to process
         :param site_domain: Domain to work with
@@ -35,6 +37,7 @@ class LinkCrawler(object):
         :return:
         """
         self.site_domain = site_domain
+        self.start_at = start_at if start_at else site_domain
         self.cache = cache
         self.queue = MongoQueue() if queue is None else queue
         self.max_threads = max_threads
@@ -47,7 +50,8 @@ class LinkCrawler(object):
         self.max_depth = max_depth
         self.Cassa = CassandraWrapper()
         self._clenup = self.close
-        atexit.register(self._clenup)
+        atexit.register(self._clenup)  # If collapse or ctrl-c c* session will be closed
+        atexit.register(self._clenup)  # If collapse or ctrl-c c* session will be closed
 
     def close(self):
         """Close cassa connection"""
@@ -55,7 +59,7 @@ class LinkCrawler(object):
 
     def threaded_executor(self):
         threads = []
-        self.queue.push(self.site_domain, 0)
+        self.queue.push(self.start_at, 0)
         if self.robots is None:
             self.robots = self.parse_robots_file(self.site_domain)
 
@@ -74,7 +78,6 @@ class LinkCrawler(object):
             time.sleep(1)
 
         self.close()
-        # Only used for testing
         return True
 
     def process_queue(self):
@@ -88,11 +91,11 @@ class LinkCrawler(object):
                 record = self.queue.pop()
                 if record['depth'] >= self.max_depth + 1:
                     # First occurrence of the max_depth + 1 will break the crawling
-                    print "reached depth"
+                    flushed_print_writer("+++++++++Reached maximum depth in thread")
                     self.queue.clear()
                     return
 
-                site = record['_id']
+                site = record['_id'].replace(u'\u201d', '')
                 next_depth = record['depth'] + 1
 
             except KeyError:
@@ -102,7 +105,9 @@ class LinkCrawler(object):
                 if self.robots.can_fetch(self.user_agent, site):
                     result = self.downloader(site)
                     if result['code'] is 200:
-                        print site
+                        flushed_print_writer("Depth %s: Processing: %s | Status: %s"
+                                            % (str(record['depth']), site, str(result['code'])))
+
                         self.scrap_content_links(result['html'], site, next_depth=next_depth)
                         if self.scraper is None:
                             self.Cassa.insert_into('crawl_dump', {
@@ -124,7 +129,7 @@ class LinkCrawler(object):
                                                    'created': datetime.now()
                                                })
                 else:
-                    print("Page blocked by robots")
+                    flushed_print_writer("+++++++++Page blocked by robots: %s" % site)
 
     def scrap_content_links(self, html=None, site=None, same_domain_only=True, next_depth=0):
         """
@@ -183,3 +188,7 @@ class LinkCrawler(object):
         parse_rf.read()
         return parse_rf
 
+
+def flushed_print_writer(msg):
+    sys.stdout.write("%s\n" % msg)
+    sys.stdout.flush
