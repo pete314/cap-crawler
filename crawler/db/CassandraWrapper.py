@@ -38,7 +38,7 @@ class CassandraWrapper(object):
                         values (?, ?, ?, ?, ?, ?)
                     """)
             self.session.execute_async(prep.bind(params_dict))
-        elif column_family is 'crawled_links' and len(params_dict) is 4:
+        elif column_family is 'crawled_links' and len(params_dict) >= 4:
             self.session.execute(
                 """
                 delete from crawled_links where url_hash = %(url_hash)s
@@ -47,8 +47,8 @@ class CassandraWrapper(object):
             )
             self.session.execute_async(
                 """
-                insert into crawled_links(url_hash, url, crawler_job, created)
-                values (%(url_hash)s, %(url)s, %(crawler_job)s, %(created)s)
+                insert into crawled_links(url_hash, url, crawler_job, message, created)
+                values (%(url_hash)s, %(url)s, %(crawler_job)s, %(message)s, %(created)s)
                 """,
                 params_dict
                 )

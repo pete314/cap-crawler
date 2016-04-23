@@ -9,8 +9,9 @@ Description: The executor for crawler, should be called from cli
 
 import sys
 import os.path
+import inspect
 import getopt
-sys.path.insert(0, os.path.abspath(os.path.join('.', os.pardir)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(inspect.getfile(inspect.currentframe()), os.pardir))))
 
 from crawler.worker.LinkCrawler import LinkCrawler
 from crawler.db.MongoQueue import MongoQueue

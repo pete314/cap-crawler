@@ -121,7 +121,7 @@ class LinkCrawler(object):
                                 'url': site,
                                 'scrape_type': 'FULL' if self.scraper is None else self.scraper,
                                 'crawler_job': self.crawl_job,
-                                'content': bz2.compress(result['html']).encode('hex'),
+                                'content': result['html'],  # SHOULD: bz2.compress(result['html'])
                                 'created': datetime.now()
                             })
                     else:
@@ -157,11 +157,11 @@ class LinkCrawler(object):
                         # THIS WILL EXCLUDE EXTERNAL LINKS AND ONLY LOOK FOR LINKS ON SAME DOMAIN
                         is_internal = True
                         self.queue.push(link, next_depth)
-                        links.append(link) # just used to filter
+                        links.append(link)  # just used to filter
 
                     # Store links
                     self.Cassa.insert_into('crawled_links',
-                       {
+                        {
                            'url_hash': md5(site).hexdigest(),
                            'url': site,
                            'message': ('Queued - depth %d ' % next_depth) if is_internal else 'External link',
