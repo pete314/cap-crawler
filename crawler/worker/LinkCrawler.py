@@ -109,6 +109,12 @@ class LinkCrawler(object):
                                             % (str(record['depth']), site, str(result['code'])))
 
                         self.scrap_content_links(result['html'], site, next_depth=next_depth)
+                        self.Cassa.update_link_status({
+                            'url_hash': md5(site).hexdigest(),
+                            'status': str(result['code']),
+                            'message': 'OK - depth %d' % record['depth']
+                        })
+
                         if self.scraper is None:
                             self.Cassa.insert_into('crawl_dump', {
                                 'url_hash': md5(site).hexdigest(),
@@ -142,21 +148,26 @@ class LinkCrawler(object):
         """
         if html is not None:
             links = []
+            is_internal = False
             soup = BeautifulSoup(html, 'lxml')
             for tag in soup.findAll('a', href=True):
                 if tag['href'] != '#' and not links.__contains__(tag['href']):
                     link = self.normalize_link(site, tag['href'])
                     if (same_domain_only and self.check_same_domain(site, link)):
                         # THIS WILL EXCLUDE EXTERNAL LINKS AND ONLY LOOK FOR LINKS ON SAME DOMAIN
-                        self.Cassa.insert_into('crawled_links',
-                                               {
-                                                   'url_hash': md5(site).hexdigest(),
-                                                   'url': site,
-                                                   'crawler_job': self.crawl_job,
-                                                   'created': datetime.now()
-                                               })
+                        is_internal = True
                         self.queue.push(link, next_depth)
                         links.append(link) # just used to filter
+
+                    # Store links
+                    self.Cassa.insert_into('crawled_links',
+                       {
+                           'url_hash': md5(site).hexdigest(),
+                           'url': site,
+                           'message': ('Queued - depth %d ' % next_depth) if is_internal else 'External link',
+                           'crawler_job': self.crawl_job,
+                           'created': datetime.now()
+                       })
 
     def normalize_link(self, site, link):
         """

@@ -55,6 +55,18 @@ class CassandraWrapper(object):
         else:
             return None
 
+    def update_link_status(self, params_dict=dict()):
+        """"Update entry for crawldump.crawled_links"""
+        self.session.execute(
+            """
+            update crawldump.crawled_links set
+                status=%(status)s,
+                message=%(message)s
+            where url_hash=%(url_hash)s
+            """,
+            params_dict
+        )
+
     def get_job(self, job_id):
         """"Get job from capdata.crawl_job inserted by API"""
         job = self.session.execute(

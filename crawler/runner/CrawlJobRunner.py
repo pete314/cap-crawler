@@ -44,7 +44,7 @@ class CrawlJobRunner(object):
                 elif "start-at-page" in b:
                     start_at = b.split("start-at-page:", 1)[1]
 
-            lc = LinkCrawler(site_domain=site_root, start_at=start_at, max_depth=depth)
+            lc = LinkCrawler(site_domain=site_root, start_at=start_at, max_depth=depth, crawl_job=job_id)
             if lc.threaded_executor():
                 self.Cassa.update_job_ready(self.job_id)
                 print '\n+++++++++Done'
