@@ -83,14 +83,13 @@ Quick run
 
 
 
-
 Notes
 -----
 
-There is a limit for **maximum depth** which is **4**, even with unique link visits its is possible to visit 100K pages or even more if the site is large. The start_at parameter can come in handy to reach different parts of a large site.<br/>
-By default the **entire page content is stored** in c* so large crawling sessions require sufficient storage.<br/>
-By default only html content is processed.<br/>
-Different crawling jobs can overwrite links found, as the id is hash based, for easier management and to avoid duplicate links.<br/>
+- There is a limit for **maximum depth** which is **4**, even with unique link visits its is possible to visit 100K pages or even more if the site is large. The start_at parameter can come in handy to reach different parts of a large site.<br/>
+- By default the **entire page content is stored** in c* so large crawling sessions require sufficient storage.<br/>
+- By default only html content is processed.<br/>
+- Different crawling jobs can overwrite links found, as the id is hash based, for easier management and to avoid duplicate links.<br/>
 
 ##Known issues
 Urls/robot content with special characters are not parsed.
