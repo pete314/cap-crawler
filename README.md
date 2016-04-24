@@ -103,6 +103,7 @@ Urls/robot content with special characters are not parsed.
 [Cql v.3 reference manual](https://cassandra.apache.org/doc/cql3/CQL-2.2.html)<br/>
 [Datastax Cassandra install instructions](http://docs.datastax.com/en/cassandra/3.x/cassandra/install/installDeb.html)<br/>
 [Web Scraping with Python - amazon.com](http://www.amazon.com/Web-Scraping-Python-Richard-Lawson-ebook/dp/B00YSIL1XK)<br/>
+[CAP API](https://github.com/pete314/cap-api)
 
 ##Disclaimer
 
