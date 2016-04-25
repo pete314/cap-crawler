@@ -51,7 +51,6 @@ class LinkCrawler(object):
         self.Cassa = CassandraWrapper()
         self._clenup = self.close
         atexit.register(self._clenup)  # If collapse or ctrl-c c* session will be closed
-        atexit.register(self._clenup)  # If collapse or ctrl-c c* session will be closed
 
     def close(self):
         """Close cassa connection"""
